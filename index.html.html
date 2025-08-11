@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gestión Instalaciones / Tickets</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    body { background: #f7f7fb; }
+    .card { box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .small-muted { font-size: .85rem; color: #6c757d; }
+    .visita-meta { font-size: .9rem; color: #495057; }
+    .list-item-actions button { margin-left: .5rem; }
+  </style>
+</head>
+<body class="p-4">
+
+  <div class="container">
+    <h2 class="mb-4 text-center">Gestión de Instalaciones / Tickets</h2>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-agregar" data-bs-toggle="tab" data-bs-target="#agregar" type="button" role="tab">Agregar</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-buscar" data-bs-toggle="tab" data-bs-target="#buscar" type="button" role="tab">Buscar</button>
+      </li>
+    </ul>
+
+    <div class="tab-content mt-3">
+      <!-- AGREGAR -->
+      <div class="tab-pane fade show active" id="agregar" role="tabpanel">
+        <div class="card p-3">
+          <form id="formAgregar" class="row g-3" autocomplete="off">
+            <!-- (1) Selector tipo -->
+            <div class="col-12 col-md-4">
+              <label class="form-label">Tipo</label>
+              <select class="form-select" id="campoTipo" required>
+                <option value="instalacion">Instalación</option>
+                <option value="ticket">Ticket</option>
+              </select>
+            </div>
+
+            <!-- (2) Fecha -->
+            <div class="col-12 col-md-4">
+              <label class="form-label">Fecha</label>
+              <input type="date" id="campoFecha" class="form-control" required>
+            </div>
+
+            <!-- (3) ID / Ticket -->
+            <div class="col-12 col-md-4">
+              <label class="form-label" id="labelId">ID Instalación</label>
+              <input type="text" id="campoId" class="form-control" placeholder="Ingrese ID o #Ticket" required>
+            </div>
+
+            <!-- Zona (radio) -->
+            <div class="col-12 col-md-6">
+              <label class="form-label d-block">Zona</label>
+              <div class="btn-group" role="group" aria-label="Zona">
+                <input type="radio" class="btn-check" name="zona" id="zonaOccidente" value="Occidente" required>
+                <label class="btn btn-outline-primary" for="zonaOccidente">Occidente</label>
+
+                <input type="radio" class="btn-check" name="zona" id="zonaCentral" value="Central">
+                <label class="btn btn-outline-primary" for="zonaCentral">Central</label>
+
+                <input type="radio" class="btn-check" name="zona" id="zonaOriente" value="Oriente">
+                <label class="btn btn-outline-primary" for="zonaOriente">Oriente</label>
+              </div>
+            </div>
+
+            <!-- Turno (radio) -->
+            <div class="col-12 col-md-6">
+              <label class="form-label d-block">Turno</label>
+              <div class="btn-group" role="group" aria-label="Turno">
+                <input type="radio" class="btn-check" name="turno" id="turnoManana" value="Mañana" required>
+                <label class="btn btn-outline-success" for="turnoManana">Mañana</label>
+
+                <input type="radio" class="btn-check" name="turno" id="turnoTarde" value="Tarde">
+                <label class="btn btn-outline-success" for="turnoTarde">Tarde</label>
+
+                <input type="radio" class="btn-check" name="turno" id="turnoDia" value="Transcurso del día">
+                <label class="btn btn-outline-success" for="turnoDia">Transcurso del día</label>
+              </div>
+            </div>
+
+            <!-- Toggle & Nota -->
+            <div class="col-12 col-md-3 d-flex align-items-center">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="campoPrimeros">
+                <label class="form-check-label small-muted" for="campoPrimeros">De los primeros</label>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-9">
+              <label class="form-label">Nota</label>
+              <textarea id="campoNota" class="form-control" rows="2" placeholder="Observaciones (opcional)"></textarea>
+            </div>
+
+            <!-- Botón Guardar -->
+            <div class="col-12 d-flex gap-2">
+              <button type="submit" id="btnGuardar" class="btn btn-primary">Guardar</button>
+              <button type="button" id="btnCancelarEdicion" class="btn btn-outline-secondary" style="display:none;">Cancelar edición</button>
+              <div class="ms-auto small-muted align-self-center" id="estadoEdicion" style="display:none;">Editando registro...</div>
+            </div>
+
+            <!-- Lista de visitas (filtrada por fecha y zona) -->
+            <div class="col-12">
+              <h5 class="mt-3">Lista de Visitas</h5>
+              <div class="small-muted mb-2">Se muestran los registros para la fecha seleccionada y la zona elegida.</div>
+              <ul id="listaVisitas" class="list-group"></ul>
+              <div id="mensajeSinVisitas" class="text-center text-muted mt-2" style="display:none;">No hay visitas para la fecha/zone seleccionada.</div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- BUSCAR -->
+      <div class="tab-pane fade" id="buscar" role="tabpanel">
+        <div class="card p-3">
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="switchFiltrarId">
+                <label class="form-check-label" for="switchFiltrarId">Filtrar por ID / #Ticket (ON)  —  Por fecha (OFF)</label>
+              </div>
+            </div>
+
+            <!-- Campo ID, visible solo si switch ON -->
+            <div class="col-12 col-md-4" id="bloqueBuscarId" style="display:none;">
+              <label class="form-label">ID Instalación o #Ticket</label>
+              <input type="text" id="buscarIdInput" class="form-control" placeholder="Ej: 1234 o TICK-001">
+            </div>
+
+            <!-- Campo Fecha, visible si switch OFF (o igualmente usable) -->
+            <div class="col-12 col-md-4" id="bloqueBuscarFecha">
+              <label class="form-label">Fecha</label>
+              <input type="date" id="buscarFechaInput" class="form-control">
+            </div>
+
+            <div class="col-12 col-md-4">
+              <button id="btnBuscar" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i> Buscar</button>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <h5>Resultados</h5>
+          <ul id="listaResultados" class="list-group"></ul>
+          <div id="mensajeSinResultados" class="text-center text-muted mt-2" style="display:none;">No se encontraron registros.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* --------------------------
+   ESTRUCTURA DEL REGISTRO:
+   {
+     uid: string, // identificador único interno
+     tipo: "instalacion" | "ticket",
+     id: "12345" (texto),
+     fecha: "YYYY-MM-DD",
+     zona: "Occidente" | "Central" | "Oriente",
+     turno: "Mañana" | "Tarde" | "Transcurso del día",
+     primeros: boolean,
+     nota: string
+   }
+   -------------------------- */
+
+const LS_KEY = 'visitas_registros_v1';
+
+// utilidades
+const qs = s => document.querySelector(s);
+const qsa = s => Array.from(document.querySelectorAll(s));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+
+// elementos
+const campoTipo = qs('#campoTipo');
+const campoFecha = qs('#campoFecha');
+const campoId  = qs('#campoId');
+const campoNota = qs('#campoNota');
+const campoPrimeros = qs('#campoPrimeros');
+const btnGuardar = qs('#btnGuardar');
+const listaVisitas = qs('#listaVisitas');
+const mensajeSinVisitas = qs('#mensajeSinVisitas');
+
+const switchFiltrarId = qs('#switchFiltrarId');
+const buscarIdInput = qs('#buscarIdInput');
+const buscarFechaInput = qs('#buscarFechaInput');
+const bloqueBuscarId = qs('#bloqueBuscarId');
+const btnBuscar = qs('#btnBuscar');
+const listaResultados = qs('#listaResultados');
+const mensajeSinResultados = qs('#mensajeSinResultados');
+
+const labelId = qs('#labelId');
+const btnCancelarEdicion = qs('#btnCancelarEdicion');
+const estadoEdicion = qs('#estadoEdicion');
+
+let registros = [];      // array en memoria
+let editUid = null;      // uid del registro en edición (null si nuevo)
+
+// carga desde localStorage
+function cargarRegistros() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    registros = raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    registros = [];
+    console.error('Error parseando registros en localStorage:', e);
+  }
+}
+
+// guarda en localStorage
+function guardarRegistros() {
+  localStorage.setItem(LS_KEY, JSON.stringify(registros));
+}
+
+/* ---------- RENDER LISTA EN AGREGAR ----------
+   Muestra registros para la fecha seleccionada Y la zona seleccionada
+*/
+function renderListaVisitas() {
+  const fecha = campoFecha.value;
+  const zonaSeleccionada = qsa('input[name="zona"]').find(r => r.checked)?.value || null;
+  listaVisitas.innerHTML = '';
+  if (!fecha) {
+    mensajeSinVisitas.style.display = 'block';
+    mensajeSinVisitas.textContent = 'Seleccione una fecha para ver las visitas.';
+    return;
+  }
+
+  const filtrados = registros.filter(r => r.fecha === fecha && (!zonaSeleccionada || r.zona === zonaSeleccionada));
+
+  if (filtrados.length === 0) {
+    mensajeSinVisitas.style.display = 'block';
+    mensajeSinVisitas.textContent = 'No hay visitas para la fecha/ zona seleccionada.';
+    return;
+  }
+  mensajeSinVisitas.style.display = 'none';
+
+  // ordenar por hora (no hay hora) -> ordenar por primer booleano "primeros" primero, luego por tipo y id
+  filtrados.sort((a,b) => {
+    if (a.primeros !== b.primeros) return b.primeros - a.primeros;
+    if (a.tipo !== b.tipo) return a.tipo.localeCompare(b.tipo);
+    return a.id.localeCompare(b.id);
+  });
+
+  for (const r of filtrados) {
+    const li = document.createElement('li');
+    li.className = 'list-group-item';
+    li.innerHTML = `
+      <div class="d-flex w-100 justify-content-between align-items-start">
+        <div>
+          <div class="fw-semibold">${r.tipo === 'instalacion' ? 'Instalación' : 'Ticket'}: ${escapeHtml(r.id)}</div>
+          <div class="visita-meta">
+            Zona: ${r.zona} • Turno: ${r.turno} • ${r.primeros ? '<strong>De los primeros</strong>' : 'No de los primeros'}
+          </div>
+        </div>
+        <div class="text-end small-muted">
+          <div>${r.fecha}</div>
+          <div class="small list-item-actions">
+            <button class="btn btn-sm btn-outline-secondary" data-action="editar" data-uid="${r.uid}" title="Editar"><i class="bi bi-pencil-fill"></i></button>
+            <button class="btn btn-sm btn-outline-danger" data-action="eliminar" data-uid="${r.uid}" title="Eliminar"><i class="bi bi-trash-fill"></i></button>
+          </div>
+        </div>
+      </div>
+      ${r.nota ? `<div class="mt-2 text-muted">${escapeHtml(r.nota)}</div>` : ''}
+    `;
+    listaVisitas.appendChild(li);
+  }
+}
+
+/* ---------- RENDER RESULTADOS (BUSCAR) ----------
+   Muestra registros dependiendo de switch: por ID o por Fecha
+*/
+function renderResultados() {
+  const usarId = switchFiltrarId.checked;
+  const idQuery = buscarIdInput.value.trim().toLowerCase();
+  const fechaQuery = buscarFechaInput.value;
+  listaResultados.innerHTML = '';
+
+  let encontrados = [];
+
+  if (usarId) {
+    if (!idQuery) {
+      mensajeSinResultados.style.display = 'block';
+      mensajeSinResultados.textContent = 'Ingrese un ID o #Ticket para buscar.';
+      return;
+    }
+    encontrados = registros.filter(r => r.id.toLowerCase().includes(idQuery));
+  } else {
+    if (!fechaQuery) {
+      mensajeSinResultados.style.display = 'block';
+      mensajeSinResultados.textContent = 'Seleccione una fecha para buscar.';
+      return;
+    }
+    encontrados = registros.filter(r => r.fecha === fechaQuery);
+  }
+
+  if (encontrados.length === 0) {
+    mensajeSinResultados.style.display = 'block';
+    mensajeSinResultados.textContent = 'No se encontraron registros.';
+    return;
+  }
+
+  mensajeSinResultados.style.display = 'none';
+
+  // ordenar por fecha y luego por zona
+  encontrados.sort((a,b) => {
+    if (a.fecha !== b.fecha) return a.fecha.localeCompare(b.fecha);
+    if (a.zona !== b.zona) return a.zona.localeCompare(b.zona);
+    return a.id.localeCompare(b.id);
+  });
+
+  for (const r of encontrados) {
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex justify-content-between align-items-start';
+    li.innerHTML = `
+      <div>
+        <div class="fw-semibold">${r.tipo === 'instalacion' ? 'Instalación' : 'Ticket'}: ${escapeHtml(r.id)}</div>
+        <div class="visita-meta">
+          Fecha: <strong>${r.fecha}</strong> • Zona: ${r.zona} • Turno: ${r.turno} ${r.primeros ? '• <strong>De los primeros</strong>' : ''}
+        </div>
+        ${r.nota ? `<div class="mt-1 text-muted">${escapeHtml(r.nota)}</div>` : ''}
+      </div>
+      <div class="ms-2">
+        <button class="btn btn-sm btn-outline-secondary" data-action="editar" data-uid="${r.uid}" title="Editar"><i class="bi bi-pencil-fill"></i></button>
+        <button class="btn btn-sm btn-outline-danger" data-action="eliminar" data-uid="${r.uid}" title="Eliminar"><i class="bi bi-trash-fill"></i></button>
+      </div>
+    `;
+    listaResultados.appendChild(li);
+  }
+}
+
+/* ---------- FORM: GUARDAR NUEVO / GUARDAR EDICIÓN ---------- */
+function leerFormulario() {
+  const tipo = campoTipo.value;
+  const id = campoId.value.trim();
+  const fecha = campoFecha.value;
+  const zona = qsa('input[name="zona"]').find(r => r.checked)?.value || null;
+  const turno = qsa('input[name="turno"]').find(r => r.checked)?.value || null;
+  const primeros = campoPrimeros.checked;
+  const nota = campoNota.value.trim();
+
+  return { tipo, id, fecha, zona, turno, primeros, nota };
+}
+
+function validarFormulario(data) {
+  if (!data.id) { alert('Ingrese ID de instalación o #Ticket.'); return false; }
+  if (!data.fecha) { alert('Seleccione una fecha.'); return false; }
+  if (!data.zona) { alert('Seleccione una zona.'); return false; }
+  if (!data.turno) { alert('Seleccione un turno.'); return false; }
+  return true;
+}
+
+function resetFormulario() {
+  qs('#formAgregar').reset();
+  editUid = null;
+  btnCancelarEdicion.style.display = 'none';
+  estadoEdicion.style.display = 'none';
+  // forzar label ID a estado por defecto
+  labelId.textContent = campoTipo.value === 'instalacion' ? 'ID Instalación' : '# Ticket';
+}
+
+qs('#formAgregar').addEventListener('submit', function(e){
+  e.preventDefault();
+  const data = leerFormulario();
+  if (!validarFormulario(data)) return;
+
+  if (!editUid) {
+    // nuevo
+    const nuevo = { ...data, uid: uid() };
+    registros.push(nuevo);
+  } else {
+    // edición: buscar por editUid y remplazar
+    const ix = registros.findIndex(r => r.uid === editUid);
+    if (ix >= 0) {
+      registros[ix] = { ...registros[ix], ...data };
+    } else {
+      alert('Registro a editar no encontrado.');
+    }
+  }
+
+  guardarRegistros();
+  resetFormulario();
+  renderListaVisitas();
+  // actualizar resultados de búsqueda si visibles
+  if (document.querySelector('#buscar').classList.contains('show')) renderResultados();
+
+  // si estábamos editando, volvemos a la interfaz normal: navegamos a la pestaña BUSCAR (como pediste "quede normalmente")
+  if (!editUid) {
+    // dejar en Agregar tras crear nuevo
+    campoId.focus();
+  } else {
+    // si editamos, iremos a pestaña Buscar para mostrar el resultado actualizado
+    const trigger = qs('#tab-buscar');
+    const tab = new bootstrap.Tab(trigger);
+    tab.show();
+    // limpiar edición
+    editUid = null;
+    btnCancelarEdicion.style.display = 'none';
+    estadoEdicion.style.display = 'none';
+  }
+
+  alert('Registro guardado correctamente.');
+});
+
+/* ---------- EDICIÓN ---------- */
+function iniciarEdicion(uidRegistro) {
+  const r = registros.find(x => x.uid === uidRegistro);
+  if (!r) return alert('Registro no encontrado para edición.');
+
+  // prellenar formulario (ir a pestaña Agregar y mostrar estado de edición)
+  const trigger = qs('#tab-agregar');
+  const tab = new bootstrap.Tab(trigger);
+  tab.show();
+
+  campoTipo.value = r.tipo;
+  labelId.textContent = r.tipo === 'instalacion' ? 'ID Instalación' : '# Ticket';
+  campoFecha.value = r.fecha;
+  campoId.value = r.id;
+  campoNota.value = r.nota || '';
+  campoPrimeros.checked = !!r.primeros;
+
+  // radios zona
+  const zonaRadio = qsa('input[name="zona"]');
+  zonaRadio.forEach(rb => rb.checked = (rb.value === r.zona));
+  // radios turno
+  const turnoRadio = qsa('input[name="turno"]');
+  turnoRadio.forEach(rb => rb.checked = (rb.value === r.turno));
+
+  editUid = r.uid;
+  btnCancelarEdicion.style.display = 'inline-block';
+  estadoEdicion.style.display = 'inline-block';
+  estadoEdicion.textContent = 'Editando registro...';
+
+  // al mostrar formulario, también actualizar lista de visitas correspondiente (fecha + zona)
+  renderListaVisitas();
+}
+
+btnCancelarEdicion.addEventListener('click', () => {
+  resetFormulario();
+  renderListaVisitas();
+});
+
+/* ---------- ELIMINAR ---------- */
+function eliminarRegistro(uidRegistro) {
+  if (!confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
+  registros = registros.filter(r => r.uid !== uidRegistro);
+  guardarRegistros();
+  renderListaVisitas();
+  renderResultados();
+}
+
+/* ---------- EVENTOS - Delegación para botones de editar/eliminar en listas ---------- */
+listaVisitas.addEventListener('click', function(e){
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const uidRegistro = btn.dataset.uid;
+  if (action === 'editar') iniciarEdicion(uidRegistro);
+  if (action === 'eliminar') eliminarRegistro(uidRegistro);
+});
+
+listaResultados.addEventListener('click', function(e){
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const uidRegistro = btn.dataset.uid;
+  if (action === 'editar') iniciarEdicion(uidRegistro);
+  if (action === 'eliminar') eliminarRegistro(uidRegistro);
+});
+
+/* ---------- INTERACCIONES UI ---------- */
+campoTipo.addEventListener('change', () => {
+  labelId.textContent = campoTipo.value === 'instalacion' ? 'ID Instalación' : '# Ticket';
+});
+
+campoFecha.addEventListener('change', () => {
+  // cuando cambia la fecha en agregar, actualizar lista de visitas
+  renderListaVisitas();
+});
+
+qsa('input[name="zona"]').forEach(r => r.addEventListener('change', renderListaVisitas));
+qsa('input[name="turno"]').forEach(r => r.addEventListener('change', () => {})); // no hace falta, pero queda por si quieres reaccionar
+
+// switch buscar: muestra/oculta input ID
+switchFiltrarId.addEventListener('change', () => {
+  bloqueBuscarId.style.display = switchFiltrarId.checked ? 'block' : 'none';
+  // limpiar resultados previos
+  listaResultados.innerHTML = '';
+  mensajeSinResultados.style.display = 'none';
+});
+
+// boton buscar
+btnBuscar.addEventListener('click', () => renderResultados());
+
+// permitir buscar con Enter en campo ID o fecha
+buscarIdInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') renderResultados(); });
+buscarFechaInput.addEventListener('change', renderResultados);
+
+/* ---------- ESCAPAR HTML para evitar inyección en display ---------- */
+function escapeHtml(str) {
+  if (!str && str !== 0) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/* ---------- Inicialización ---------- */
+function inicializar() {
+  cargarRegistros();
+
+  // Si no hay fecha por defecto, colocar hoy en ambos selectores
+  const hoy = new Date().toISOString().slice(0,10);
+  if (!campoFecha.value) campoFecha.value = hoy;
+  if (!buscarFechaInput.value) buscarFechaInput.value = hoy;
+
+  renderListaVisitas();
+  // renderResultados(); // se ejecuta al pedir Buscar
+}
+
+inicializar();
+
+</script>
+
+<!-- Bootstrap Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
